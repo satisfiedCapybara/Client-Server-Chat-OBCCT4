@@ -9,34 +9,33 @@ namespace Client
 {
   public partial class Form1 : Form
   {
-    static int port = 8005; // порт сервера
-    static string address = "127.0.0.1"; // адрес сервера
-    static IPEndPoint ipPoint;
-    Socket socket;
-    StringBuilder builder;
-    Thread thread;
+    private int myPort = 8005;
+    private string myAddress = "127.0.0.1";
+    private IPEndPoint myIpPoint;
+    private Socket mySocket;
+    private Thread myRecieveThread;
 
 
-    void func(object listeningSocket)
+    void RecieveMessage(object theListenSocket)
     {
-      StringBuilder builder = new StringBuilder();
+      StringBuilder aBuilder = new StringBuilder("");
+      Socket aListenSocket = theListenSocket as Socket;
 
-      Socket listenSocket = listeningSocket as Socket;
+      byte[] aData = new byte[256];
+      int aBytes = 0;
 
-      byte[] data = new byte[256];
-      int bytes = 0;
-
-      for (; ; )
+      for ( ; ; )
       {
-        builder = new StringBuilder("");
+        aBuilder = new StringBuilder("");
 
         do
         {
-          bytes = listenSocket.Receive(data, data.Length, 0);
-          builder.Append(Encoding.UTF8.GetString(data, 0, bytes));
+          aBytes = aListenSocket.Receive(aData, aData.Length, 0);
+          aBuilder.Append(Encoding.UTF8.GetString(aData, 0, aBytes));
         }
-        while (listenSocket.Available > 0);
-        this.OutputTextField.Text += DateTime.Now.ToShortTimeString() + "\n" +"Сообщение: " + builder.ToString() + "\n\n";
+        while (aListenSocket.Available > 0);
+
+        OutputTextField.Text += DateTime.Now.ToShortTimeString() + "\n" +"Message: " + aBuilder.ToString() + "\n\n";
       }
 
 
@@ -44,31 +43,19 @@ namespace Client
     public Form1()
     {
       InitializeComponent();
-      ipPoint = new IPEndPoint(IPAddress.Parse(address), port);
-      //создаем сокет
-      socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+      myIpPoint = new IPEndPoint(IPAddress.Parse(myAddress), myPort);
+      mySocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+      mySocket.Connect(myIpPoint);
 
-      // подключаемся к удаленному хосту
-      socket.Connect(ipPoint);
-      builder = new StringBuilder();
-
-      thread = new Thread(this.func);
-      thread.Start(socket);
+      myRecieveThread = new Thread(this.RecieveMessage);
+      myRecieveThread.Start(mySocket);
     }
 
     private void SendButton_Click(object sender, EventArgs e)
     {
-      string message = InputTextField.Text;
-      byte[] data = Encoding.Unicode.GetBytes(message);
+      byte[] aData = Encoding.Unicode.GetBytes(InputTextField.Text);
 
-      //посылаем сообщение
-      socket.Send(data);
-      // готовимся получить ответ
-      data = new byte[256]; // буфер для ответа
-      int bytes = 0; // количество полученных байт
-                      // получаем ответ'
-
-      builder = new StringBuilder("");
+      mySocket.Send(aData);
     }
   }
 }
